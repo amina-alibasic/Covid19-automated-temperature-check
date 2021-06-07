@@ -61,8 +61,13 @@ all: main-build
 main-build: full_pinout.elf secondary-outputs
 
 # Tool invocations
+<<<<<<< HEAD
 full_pinout.elf: $(OBJS) $(USER_OBJS) /home/amina/Covid-19-automated-temperature-check/STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	arm-none-eabi-gcc -o "full_pinout.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/amina/Covid-19-automated-temperature-check/STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="full_pinout.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+=======
+full_pinout.elf: $(OBJS) $(USER_OBJS) /home/amina/Desktop/PMPS_projekat/Covid19-automated-temperature-check/STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "full_pinout.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/amina/Desktop/PMPS_projekat/Covid19-automated-temperature-check/STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="full_pinout.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+>>>>>>> 9b971f868b196d6de965df2a872df060ba71a2ec
 	@echo 'Finished building target: $@'
 	@echo ' '
 
