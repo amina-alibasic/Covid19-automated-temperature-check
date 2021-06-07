@@ -5,11 +5,12 @@
 #include <stdio.h>
 #include "stm32f4xx_hal.h"
 
-
-
 /* Private variables */
 ADC_HandleTypeDef hadc1;
+
+TIM_HandleTypeDef htim9;
 TIM_HandleTypeDef htim12;
+
 UART_HandleTypeDef huart2;
 
 
@@ -33,7 +34,6 @@ int checkYes();
 int checkNo();
 void outputQuestions(void);
 
-
 int state = 0;
 int counter;
 
@@ -48,9 +48,7 @@ int main(void)
 {
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-  SystemClock_Config();
-
-
+ // SystemClock_Config();
   /* Initialize all configured peripherals */
   initUSART2(921600);
   MX_GPIO_Init();
@@ -66,10 +64,14 @@ int main(void)
 
   uint16_t raw;
   while(1){
-  printUSART2("Dobrodosli.\n");
-  printUSART2("Molimo Vas dodirnite senzor za mjerenje temperature");
-  printUSART2(" i sacekajte da se Vasa temperatura izmjeri.\n");
-  HAL_Delay(5000);
+	  counter = 0;
+	  HAL_Delay(100);
+	  printUSART2("Dobrodosli.\n");
+	  HAL_Delay(100);
+	  printUSART2("Molimo Vas dodirnite senzor za mjerenje temperature");
+	  HAL_Delay(100);
+	  printUSART2(" i sacekajte da se Vasa temperatura izmjeri.\n");
+	  HAL_Delay(2000);
         raw = getADC();
  	  	double v = raw * 3.3 / 4096;
  	  	double Rt = 10 * v / ( 3.3 - v );
@@ -89,14 +91,13 @@ int main(void)
 	  	 outputQuestions();
   }
 
-
-	  	 	 			HAL_Delay(1000);
-
 }
 
 
 void outputQuestions(void){
 	while(1){
+		HAL_Delay(100);
+		counter = 0;
 	// first question
 	printUSART2("%s\n", nextQuestion());
 
@@ -132,7 +133,7 @@ void outputQuestions(void){
 		  	}
 		 }
 	}
-	HAL_Delay(10);
+	HAL_Delay(100);
 	}
 }
 
@@ -169,42 +170,42 @@ int checkNo(){
 
 void SystemClock_Config(void)
 {
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+	  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
-  __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 84;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+	  /** Configure the main internal regulator output voltage
+	  */
+	  __HAL_RCC_PWR_CLK_ENABLE();
+	  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+	  /** Initializes the RCC Oscillators according to the specified parameters
+	  * in the RCC_OscInitTypeDef structure.
+	  */
+	  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+	  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+	  RCC_OscInitStruct.PLL.PLLM = 8;
+	  RCC_OscInitStruct.PLL.PLLN = 84;
+	  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	  RCC_OscInitStruct.PLL.PLLQ = 4;
+	  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  /** Initializes the CPU, AHB and APB buses clocks
+	  */
+	  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+	                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+	  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+	  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
 }
 
 
@@ -249,7 +250,6 @@ uint16_t getADC(void)
 
 	return HAL_ADC_GetValue(&hadc1);
 }
-
 
 static void MX_TIM12_Init(void) // for DC
 {
@@ -297,34 +297,34 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, DC_in1_Pin|DC_in2_Pin|trigger_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DC_in1_Pin|DC_in2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, green_Pin|red_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : yes_button_Pin echo_Pin */
-  GPIO_InitStruct.Pin = yes_button_Pin|echo_Pin;
+  /*Configure GPIO pins : yes_button_Pin */
+  GPIO_InitStruct.Pin = yes_button_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DC_in1_Pin DC_in2_Pin trigger_Pin */
-  GPIO_InitStruct.Pin = DC_in1_Pin|DC_in2_Pin|trigger_Pin;
+  /*Configure GPIO pins : DC_in1_Pin DC_in2_Pin */
+  GPIO_InitStruct.Pin = DC_in1_Pin|DC_in2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : no_button_Pin */
-  GPIO_InitStruct.Pin = no_button_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(no_button_GPIO_Port, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = no_button_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(no_button_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : green_Pin red_Pin */
   GPIO_InitStruct.Pin = green_Pin|red_Pin;
@@ -334,10 +334,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : IR_sensor_Pin */
-  GPIO_InitStruct.Pin = IR_sensor_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(IR_sensor_GPIO_Port, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin = IR_sensor_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+    HAL_GPIO_Init(IR_sensor_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
@@ -434,6 +434,5 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
 
 

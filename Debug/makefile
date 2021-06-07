@@ -61,8 +61,8 @@ all: main-build
 main-build: full_pinout.elf secondary-outputs
 
 # Tool invocations
-full_pinout.elf: $(OBJS) $(USER_OBJS) /home/amina/fullPinout2/STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "full_pinout.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/amina/fullPinout2/STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="full_pinout.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+full_pinout.elf: $(OBJS) $(USER_OBJS) /home/amina/Covid-19-automated-temperature-check/STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "full_pinout.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/amina/Covid-19-automated-temperature-check/STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="full_pinout.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
