@@ -1,0 +1,3 @@
+misc.c:3:6:getDNumMISC	24	static
+misc.c:20:6:putDNumMISC	32	static
+misc.c:44:6:getStr4NumMISC	72	static
