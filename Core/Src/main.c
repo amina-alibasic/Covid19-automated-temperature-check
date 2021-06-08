@@ -35,8 +35,13 @@ int checkNo();
 void outputQuestions(void);
 int movementDetected();
 
-int state = 0;
+int stateYes = 0;
+int stateNo = 0;
 int counter;
+
+float R1 = 1000;
+float logR2, R2, T;
+float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
 
 char* questions[4]={"Da li ste u posljednjih 14 dana imali povisenu temperaturu?",
 		  "Da li imate  problema s disanjem?",
@@ -62,35 +67,47 @@ int main(void)
 
   // HAL_TIM_PWM_Start(&htim12,TIM_CHANNEL_1);  //PB0 Start pwm  motor 100% duty cycle
    //__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 40);
-
-  uint16_t raw;
+  float cels;
+  float raw;
   while(1){
+	//  while(1) {
+	//	  if( HAL_GPIO_ReadPin(GPIOD, no_button_Pin) == GPIO_PIN_SET){// turn on green LED
+	 // 	 	 	 HAL_GPIO_WritePin(GPIOA,green_Pin, GPIO_PIN_SET); }
+	//  }
+
 	  while(!movementDetected())
 	  HAL_Delay(1000);
 	  printUSART2("Dobrodosli.\n");
 	  printUSART2("Molimo Vas dodirnite senzor za mjerenje temperature i sacekajte da se Vasa temperatura izmjeri.\n");
 	  HAL_Delay(3000);
-        raw = getADC();
- 	  	double v = raw * 3.3 / 4096;
- 	  	double Rt = 10 * v / ( 3.3 - v );
- 	  	double temp = 1 / (log(Rt / 10) / 3950 + 1 / (273.15 + 25));
- 	  	double tempc = temp - 273.15 - 2;
+          raw = getADC();
+ 	  double v = raw * (3.0 / 4096);
+ 	    R2 = R1 * (1023.0 / (float)raw - 1.0);
+ 	    logR2 = log(R2);
+ 	    T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+ 	    T = T - 273.15;
+ 	    T = (T * 9.0)/ 5.0 + 32.0;
+ 	    cels = (T - 32) * 5 / 9;
+ 	    
+ 	 // 	double Rt = 10 * v / ( 3.0 - v );
+ 	 // 	double temp = 1 / (log(Rt / 10) / 3950 + 1 / (273.15 + 25));
+ 	 // 	double tempc = temp - 273.15;
+ 	 
 	  	 // check if user has touched the thermistor
 	  	 // no room temperature is over 30 and person's temperature is under 30
-	  	 if(tempc > 30){
+	  	 if(cels > 30){
 	  	 	 printUSART2("Mjerenje ...\n");
 	  	 	 HAL_Delay(5000); // wait aprox. 5sec for sensor to measure the temperature
 	  	 }
-         char res[20];
-	  	 ftoa(tempc, res, 1);
+                char res[4];
+	  	 ftoa(cels, res, 1);
 	  	 printUSART2("Vasa temperatura iznosi %s\n", res);
-	  	 if(tempc > 36.9) { yesAnswer(); return 0;}
+	  	// if(tempc > 36.9) { yesAnswer(); return 0;}
 
 	  	 outputQuestions();
   }
 
 }
-
 
 void outputQuestions(void){
 	while(1){
@@ -100,7 +117,7 @@ void outputQuestions(void){
 	printUSART2("%s\n", nextQuestion());
 
 	// check for YES button press
-	if(checkYes()) { yesAnswer(); }
+	if(checkYes()) { yesAnswer(); return; }
 
 	// check for NO button press
 	else if(checkNo()) {
@@ -108,17 +125,17 @@ void outputQuestions(void){
 		printUSART2("%s\n", nextQuestion());
 
 		// check for YES button press
-		if(checkYes()) { yesAnswer(); }
+		if(checkYes()) { yesAnswer(); return; }
 		else if(checkNo()) {
 			// 3rd question
 			printUSART2("%s\n", nextQuestion());
 
-		  	if(checkYes()) { yesAnswer(); }
+		  	if(checkYes()) { yesAnswer(); return;  }
 		  	else if(checkNo()) {
 		  		// 4th question
 		  		printUSART2("%s\n", nextQuestion());
 
-		  		if(checkYes()) { yesAnswer(); }
+		  		if(checkYes()) { yesAnswer(); return;  }
 		  	 	else if(checkNo()) {
 		  	 		// turn on green LED
 		  	 	 	 HAL_GPIO_WritePin(GPIOA,green_Pin, GPIO_PIN_SET);
@@ -150,28 +167,32 @@ char* nextQuestion(){
 void yesAnswer(){
 	// turn on red LED
 	HAL_GPIO_WritePin(GPIOA,red_Pin,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_SET);   // Start motor clockwise rotation
-    HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
-	printUSART2("%s", warning);
+	printUSART2("%s\n\n", warning);
 }
 
 int checkYes(){
-	 state = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
+	 stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
 	 HAL_Delay(10);
-	 if(state){
+
+	 while(!stateYes && !HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
 		 // turn on red LED
 		 HAL_GPIO_TogglePin(GPIOD,red_Pin);
-		 return 1;
+		 stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
 	 }
-	 else return 0;
+	 if(HAL_GPIO_ReadPin(GPIOD, no_button_Pin)) return 0;
+	 else return 1;
+
 }
 
 int checkNo(){
 	  // check for NO button press
-	  state = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
+	  stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
 	  HAL_Delay(10);
-	  if(state){ return 1;}
-	  else return 0;
+	  while(!stateNo && !HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
+		  stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
+	  }
+	  if(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)) return 0;
+	  else return 1;
 }
 
 void reverse(char* str, int len)
@@ -452,7 +473,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : no_button_Pin */
   GPIO_InitStruct.Pin = no_button_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(no_button_GPIO_Port, &GPIO_InitStruct);
 
