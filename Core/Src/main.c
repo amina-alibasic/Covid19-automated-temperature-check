@@ -150,6 +150,8 @@ char* nextQuestion(){
 void yesAnswer(){
 	// turn on red LED
 	HAL_GPIO_WritePin(GPIOA,red_Pin,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_SET);   // Start motor clockwise rotation
+    HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
 	printUSART2("%s", warning);
 }
 
@@ -240,7 +242,6 @@ uint16_t getADC(void)
 
 	return HAL_ADC_GetValue(&hadc1);
 }
-
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -426,7 +427,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
