@@ -64,7 +64,7 @@ int main(void)
 
 
   HAL_TIM_Base_Start(&htim12); //Initialize stm32 timer for DC motor
-
+  HAL_TIM_PWM_Start(&htim12,TIM_CHANNEL_1);
   float cels;
   float raw;
   while(1){
@@ -102,10 +102,12 @@ int main(void)
 	 	 // if a person's temperature is higher than normal, stop the program and output the warning message
 		 if(cels > 36.9) yesAnswer();
 		 else  outputQuestions();
-		 HAL_Delay(3000);
+		 HAL_Delay(4000);
+		 // turn off the LEDs and motor before new program run
 		 HAL_GPIO_WritePin(GPIOD,red_Pin,GPIO_PIN_RESET);
 		 HAL_GPIO_WritePin(GPIOD,green_Pin, GPIO_PIN_RESET);
-
+		 HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_RESET);
+		 HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
 
   }
 
