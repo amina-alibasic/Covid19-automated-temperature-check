@@ -65,46 +65,43 @@ int main(void)
 
   HAL_TIM_Base_Start(&htim12); //Initialize stm32 timer for DC motor
 
-  // HAL_TIM_PWM_Start(&htim12,TIM_CHANNEL_1);  //PB0 Start pwm  motor 100% duty cycle
-   //__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 40);
   float cels;
   float raw;
   while(1){
-	//  while(1) {
-	//	  if( HAL_GPIO_ReadPin(GPIOD, no_button_Pin) == GPIO_PIN_SET){// turn on green LED
-	 // 	 	 	 HAL_GPIO_WritePin(GPIOA,green_Pin, GPIO_PIN_SET); }
-	//  }
-
+	  /* run this while loop until IR sensos detects object
+	  - this stops the program from running until an object is detected */
 	  while(!movementDetected())
 	  HAL_Delay(1000);
 	  printUSART2("Dobrodosli.\n");
 	  printUSART2("Molimo Vas dodirnite senzor za mjerenje temperature i sacekajte da se Vasa temperatura izmjeri.\n");
-	  HAL_Delay(3000);
-          raw = getADC();
- 	  double v = raw * (3.0 / 4096);
+	  HAL_Delay(5000); // give time for person to touch the sensor
+
+	    // thermistor temperature logic
+        raw = getADC();
  	    R2 = R1 * (1023.0 / (float)raw - 1.0);
  	    logR2 = log(R2);
  	    T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
  	    T = T - 273.15;
  	    T = (T * 9.0)/ 5.0 + 32.0;
  	    cels = (T - 32) * 5 / 9;
- 	    
- 	 // 	double Rt = 10 * v / ( 3.0 - v );
- 	 // 	double temp = 1 / (log(Rt / 10) / 3950 + 1 / (273.15 + 25));
- 	 // 	double tempc = temp - 273.15;
+
  	 
 	  	 // check if user has touched the thermistor
-	  	 // no room temperature is over 30 and person's temperature is under 30
-	  	 if(cels > 30){
+	  	 // no room temperature is over 30 deg. Celsius and no person's temperature is under 30 deg. C
+	  	 if(cels> 30){
 	  	 	 printUSART2("Mjerenje ...\n");
 	  	 	 HAL_Delay(5000); // wait aprox. 5sec for sensor to measure the temperature
 	  	 }
-                char res[4];
-	  	 ftoa(cels, res, 1);
-	  	 printUSART2("Vasa temperatura iznosi %s\n", res);
-	  	// if(tempc > 36.9) { yesAnswer(); return 0;}
 
+	  	 // output temperature
+	  	 char res[4];
+	  	 ftoa(cels, res, 1);
+	  	 printUSART2("Vasa temperatura iznosi %s stepeni Celzijusa.\n", res);
+
+	 	 // if a person's temperature is higher than normal, stop the program and output the warning message
+		  	 if(cels > 36.9) { yesAnswer(); return; }
 	  	 outputQuestions();
+
   }
 
 }
@@ -112,7 +109,9 @@ int main(void)
 void outputQuestions(void){
 	while(1){
 		HAL_Delay(100);
-		counter = 0;
+		counter = 0; // counter for questions[] array
+		// should be initialized to 0 every time the program goes trough loop again
+
 	// first question
 	printUSART2("%s\n", nextQuestion());
 
@@ -123,37 +122,33 @@ void outputQuestions(void){
 	else if(checkNo()) {
 		// second question
 		printUSART2("%s\n", nextQuestion());
-
-		// check for YES button press
 		if(checkYes()) { yesAnswer(); return; }
 		else if(checkNo()) {
 			// 3rd question
 			printUSART2("%s\n", nextQuestion());
-
 		  	if(checkYes()) { yesAnswer(); return;  }
 		  	else if(checkNo()) {
 		  		// 4th question
 		  		printUSART2("%s\n", nextQuestion());
-
-		  		if(checkYes()) { yesAnswer(); return;  }
+     	  		if(checkYes()) { yesAnswer(); return;  }
 		  	 	else if(checkNo()) {
-		  	 		// turn on green LED
-		  	 	 	 HAL_GPIO_WritePin(GPIOA,green_Pin, GPIO_PIN_SET);
-		  	 	 	 printUSART2("Mozete uci u prostoriju.");
+		  	 	 	 HAL_GPIO_WritePin(GPIOA,green_Pin, GPIO_PIN_SET); // turn on green LED
+		  	 	 	 printUSART2("Mozete uci u prostoriju.\n\n");
+		  	 	 	 HAL_Delay(3000);
 		  	 	 	 HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_SET);   // Start motor clockwise rotation
 		  	 	 	 HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
-		  	 	 	 HAL_Delay(3000);
-
+		  	 	 	 return;
 		  	 	 }
 		  	}
 		 }
 	}
 	HAL_Delay(100);
-	}
+  }
 }
 
 
 int movementDetected(){
+	// IR sensor returns LOW (0) when an object is detected
 	if(HAL_GPIO_ReadPin(IR_sensor_GPIO_Port, IR_sensor_Pin) == GPIO_PIN_RESET){
 		return 1;
 	}
@@ -172,24 +167,26 @@ void yesAnswer(){
 
 int checkYes(){
 	 stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
-	 HAL_Delay(10);
+	 HAL_Delay(100);
 
-	 while(!stateYes && !HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
-		 // turn on red LED
-		 HAL_GPIO_TogglePin(GPIOD,red_Pin);
+	 while(!HAL_GPIO_ReadPin(GPIOA,yes_button_Pin) && !HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
 		 stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
 	 }
 	 if(HAL_GPIO_ReadPin(GPIOD, no_button_Pin)) return 0;
-	 else return 1;
+	 else{
+		 // turn on red LED
+		 HAL_GPIO_TogglePin(GPIOD,red_Pin);
+		 return 1;
+	 }
 
 }
 
 int checkNo(){
 	  // check for NO button press
 	  stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
-	  HAL_Delay(10);
-	  while(!stateNo && !HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
-		  stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
+	  HAL_Delay(100);
+	  while(!HAL_GPIO_ReadPin(GPIOD, no_button_Pin) && !HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
+		  stateNo = !HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
 	  }
 	  if(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)) return 0;
 	  else return 1;
@@ -245,9 +242,9 @@ void ftoa(float n, char* res, int afterpoint)
     if (afterpoint != 0) {
         res[i] = '.'; // add dot
 
-        // Get the value of fraction part upto given no.
-        // of points after dot. The third parameter
-        // is needed to handle cases like 233.007
+        /* Get the value of fraction part upto given no.
+         of points after dot. The third parameter
+         is needed to handle cases like 233.007*/
         fpart = fpart * pow(10, afterpoint);
 
         intToStr((int)fpart, res + i + 1, afterpoint);
