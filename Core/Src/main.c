@@ -31,9 +31,9 @@ void ftoa(float n, char* res, int afterpoint);
 char* nextQuestion();
 void yesAnswer();
 int checkYes();
-int checkNo();
 void outputQuestions(void);
 int movementDetected();
+
 
 int stateYes = 0;
 int stateNo = 0;
@@ -44,10 +44,10 @@ float logR2, R2, T;
 float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
 
 char* questions[4]={"Da li ste u posljednjih 14 dana imali povisenu temperaturu?",
-		  "Da li imate  problema s disanjem?",
-  	  	  "Da li ste putovali negdje izvan granica BiH u posljednjih 14 dana?",
-  	  	  "Da li ste bili u kontaktu s nekim ko je bio pozitivan na Covid-19?"};
-char* warning = "Molimo Vas da posjetite Covid ambulantu.";
+		  "Da li imate poteskoca s disanjem, kasalj, gubitak cula mirisa i/ili okusa?",
+  	  	  "Da li ste Vi ili neko iz vaseg domacinstva boravili izvan BiH u posljednjih 14 dana?",
+  	  	  "Da li ste bili u kontaktu s nekim ko je bio pozitivan na COVID-19?"};
+char* warning = "Molimo Vas da se javite na najblize COVID odjeljenje.";
 
 
 int main(void)
@@ -68,10 +68,11 @@ int main(void)
   float cels;
   float raw;
   while(1){
-	  /* run this while loop until IR sensos detects object
+	  /* run this while loop until IR sensor detects object
 	  - this stops the program from running until an object is detected */
 	  while(!movementDetected())
 	  HAL_Delay(1000);
+
 	  printUSART2("Dobrodosli.\n");
 	  printUSART2("Molimo Vas dodirnite senzor za mjerenje temperature i sacekajte da se Vasa temperatura izmjeri.\n");
 	  HAL_Delay(5000); // give time for person to touch the sensor
@@ -99,8 +100,12 @@ int main(void)
 	  	 printUSART2("Vasa temperatura iznosi %s stepeni Celzijusa.\n", res);
 
 	 	 // if a person's temperature is higher than normal, stop the program and output the warning message
-		  	 if(cels > 36.9) { yesAnswer(); return; }
-	  	 outputQuestions();
+		 if(cels > 36.9) yesAnswer();
+		 else  outputQuestions();
+		 HAL_Delay(3000);
+		 HAL_GPIO_WritePin(GPIOD,red_Pin,GPIO_PIN_RESET);
+		 HAL_GPIO_WritePin(GPIOD,green_Pin, GPIO_PIN_RESET);
+
 
   }
 
@@ -113,36 +118,34 @@ void outputQuestions(void){
 		// should be initialized to 0 every time the program goes trough loop again
 
 	// first question
-	printUSART2("%s\n", nextQuestion());
+	printUSART2("%s ", nextQuestion());
 
 	// check for YES button press
 	if(checkYes()) { yesAnswer(); return; }
-
-	// check for NO button press
-	else if(checkNo()) {
+	else {
 		// second question
-		printUSART2("%s\n", nextQuestion());
+		printUSART2("%s ", nextQuestion());
 		if(checkYes()) { yesAnswer(); return; }
-		else if(checkNo()) {
+		else{
 			// 3rd question
-			printUSART2("%s\n", nextQuestion());
-		  	if(checkYes()) { yesAnswer(); return;  }
-		  	else if(checkNo()) {
-		  		// 4th question
-		  		printUSART2("%s\n", nextQuestion());
-     	  		if(checkYes()) { yesAnswer(); return;  }
-		  	 	else if(checkNo()) {
-		  	 	 	 HAL_GPIO_WritePin(GPIOA,green_Pin, GPIO_PIN_SET); // turn on green LED
-		  	 	 	 printUSART2("Mozete uci u prostoriju.\n\n");
-		  	 	 	 HAL_Delay(3000);
-		  	 	 	 HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_SET);   // Start motor clockwise rotation
-		  	 	 	 HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
-		  	 	 	 return;
-		  	 	 }
-		  	}
-		 }
+			printUSART2("%s ", nextQuestion());
+			if(checkYes()) { yesAnswer(); return; }
+				else {
+					// 4th question
+					printUSART2("%s ", nextQuestion());
+					if(checkYes()) { yesAnswer(); return; }
+					else{
+						 HAL_GPIO_WritePin(GPIOD,green_Pin, GPIO_PIN_SET); // turn on green LED
+						 printUSART2("Mozete uci u prostoriju.\n\n");
+						 HAL_Delay(3000);
+						 HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_SET);   // Start motor clockwise rotation
+						 HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
+						 return;
+					}
+				}
+		}
 	}
-	HAL_Delay(100);
+	HAL_Delay(1000);
   }
 }
 
@@ -161,36 +164,45 @@ char* nextQuestion(){
 
 void yesAnswer(){
 	// turn on red LED
-	HAL_GPIO_WritePin(GPIOA,red_Pin,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOD,red_Pin,GPIO_PIN_SET);
 	printUSART2("%s\n\n", warning);
 }
 
 int checkYes(){
-	 stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
-	 HAL_Delay(100);
+	while(!HAL_GPIO_ReadPin(GPIOA,yes_button_Pin) && !HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
 
-	 while(!HAL_GPIO_ReadPin(GPIOA,yes_button_Pin) && !HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
-		 stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
-	 }
-	 if(HAL_GPIO_ReadPin(GPIOD, no_button_Pin)) return 0;
-	 else{
-		 // turn on red LED
-		 HAL_GPIO_TogglePin(GPIOD,red_Pin);
-		 return 1;
-	 }
+		if(HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
+			stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
+		}
+		if(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
+			stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
+		}
 
+	}
+
+	if(HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
+		stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
+	}
+	if(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
+		stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
+	}
+
+	while(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin) || HAL_GPIO_ReadPin(GPIOD, no_button_Pin));
+	if(stateYes) {
+		stateYes = stateNo = 0;
+		printUSART2("DA\n");
+
+		return 1; // return 1 for yes
+	}
+	if(stateNo){
+		stateYes = stateNo = 0;
+		printUSART2("NE\n");
+		return 0; // return 0 for no
+	}
+	return -1;
 }
 
-int checkNo(){
-	  // check for NO button press
-	  stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
-	  HAL_Delay(100);
-	  while(!HAL_GPIO_ReadPin(GPIOD, no_button_Pin) && !HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
-		  stateNo = !HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
-	  }
-	  if(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)) return 0;
-	  else return 1;
-}
+
 
 void reverse(char* str, int len)
 {
@@ -242,7 +254,7 @@ void ftoa(float n, char* res, int afterpoint)
     if (afterpoint != 0) {
         res[i] = '.'; // add dot
 
-        /* Get the value of fraction part upto given no.
+        /* Get the value of fraction part up to given no.
          of points after dot. The third parameter
          is needed to handle cases like 233.007*/
         fpart = fpart * pow(10, afterpoint);
@@ -265,13 +277,9 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -285,8 +293,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
+
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -300,25 +307,12 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_ADC1_Init(void)
 {
 
-  /* USER CODE BEGIN ADC1_Init 0 */
-
-  /* USER CODE END ADC1_Init 0 */
-
   ADC_ChannelConfTypeDef sConfig = {0};
 
-  /* USER CODE BEGIN ADC1_Init 1 */
-
-  /* USER CODE END ADC1_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
@@ -335,8 +329,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
+
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -344,30 +337,15 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-  /* USER CODE END ADC1_Init 2 */
 
 }
 
-/**
-  * @brief TIM12 Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_TIM12_Init(void)
 {
-
-  /* USER CODE BEGIN TIM12_Init 0 */
-
-  /* USER CODE END TIM12_Init 0 */
-
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
 
-  /* USER CODE BEGIN TIM12_Init 1 */
-
-  /* USER CODE END TIM12_Init 1 */
   htim12.Instance = TIM12;
   htim12.Init.Prescaler = 84-1;
   htim12.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -395,28 +373,14 @@ static void MX_TIM12_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM12_Init 2 */
-
-  /* USER CODE END TIM12_Init 2 */
   HAL_TIM_MspPostInit(&htim12);
 
 }
 
-/**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_USART2_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
   huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
@@ -429,17 +393,10 @@ static void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
 
 }
 
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -493,23 +450,15 @@ static void MX_GPIO_Init(void)
 
 }
 
-/* USER CODE BEGIN 4 */
 
-/* USER CODE END 4 */
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
+
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
+
 }
 
 #ifdef  USE_FULL_ASSERT
@@ -529,4 +478,3 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
