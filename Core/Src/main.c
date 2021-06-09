@@ -7,10 +7,7 @@
 
 /* Private variables */
 ADC_HandleTypeDef hadc1;
-
-
 TIM_HandleTypeDef htim12;
-
 UART_HandleTypeDef huart2;
 
 
@@ -61,7 +58,6 @@ int main(void)
   MX_TIM12_Init();
   MX_USART2_UART_Init();
   MX_ADC1_Init();
-
 
   HAL_TIM_Base_Start(&htim12); //Initialize stm32 timer for DC motor
   HAL_TIM_PWM_Start(&htim12,TIM_CHANNEL_1);
@@ -203,7 +199,6 @@ int checkYes(){
 	}
 	return -1;
 }
-
 
 
 void reverse(char* str, int len)
