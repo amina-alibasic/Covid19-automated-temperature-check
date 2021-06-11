@@ -71,10 +71,12 @@ int main(void)
 
 	  printUSART2("Dobrodosli.\n");
 	  printUSART2("Molimo Vas dodirnite senzor za mjerenje temperature i sacekajte da se Vasa temperatura izmjeri.\n");
-	  HAL_Delay(3000);
+	  HAL_Delay(3000); // give user the time to read the first message
+	  while(mjerenje() < 32); // run while loop until temp > 32, that indicates user has touched the sensor
+	  printUSART2("Mjerenje ...\n"); // output to user that temperature is being measured
+	  HAL_Delay(3000); // 3 seconds for thermistor to take person's body temperature
+	  cels = mjerenje(); // measure the temperature and return result to cels
 
-	  while((cels = mjerenje()) < 32);
-	  printUSART2("Mjerenje ...\n");
 
 
 	  // output temperature
