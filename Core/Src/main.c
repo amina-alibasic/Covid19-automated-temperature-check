@@ -1,4 +1,3 @@
-
 #include "main.h"
 #include<math.h>
 #include"usart.h"
@@ -30,7 +29,7 @@ void yesAnswer();
 int checkYes();
 void outputQuestions(void);
 int movementDetected();
-
+float mjerenje();
 
 int stateYes = 0;
 int stateNo = 0;
@@ -66,73 +65,69 @@ int main(void)
   while(1){
 	  /* run this while loop until IR sensor detects object
 	  - this stops the program from running until an object is detected */
-	  while(!movementDetected())
-	  HAL_Delay(1000);
+	  while(!movementDetected());
+
+	  HAL_Delay(500);
 
 	  printUSART2("Dobrodosli.\n");
 	  printUSART2("Molimo Vas dodirnite senzor za mjerenje temperature i sacekajte da se Vasa temperatura izmjeri.\n");
-	  HAL_Delay(5000); // give time for person to touch the sensor
+	  HAL_Delay(3000);
 
-	    // thermistor temperature logic
-        raw = getADC();
- 	    R2 = R1 * (1023.0 / (float)raw - 1.0);
- 	    logR2 = log(R2);
- 	    T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
- 	    T = T - 273.15;
- 	    T = (T * 9.0)/ 5.0 + 32.0;
- 	    cels = (T - 32) * 5 / 9;
+	  while((cels = mjerenje()) < 32);
+	  printUSART2("Mjerenje ...\n");
 
- 	 
-	  	 // check if user has touched the thermistor
-	  	 // no room temperature is over 30 deg. Celsius and no person's temperature is under 30 deg. C
-	  	 if(cels> 30){
-	  	 	 printUSART2("Mjerenje ...\n");
-	  	 	 HAL_Delay(5000); // wait aprox. 5sec for sensor to measure the temperature
-	  	 }
 
-	  	 // output temperature
-	  	 char res[4];
-	  	 ftoa(cels, res, 1);
-	  	 printUSART2("Vasa temperatura iznosi %s stepeni Celzijusa.\n", res);
+	  // output temperature
+	  char res[4];
+	  ftoa(cels, res, 1);
+	  printUSART2("Vasa temperatura iznosi %s stepeni Celzijusa.\n", res);
 
-	 	 // if a person's temperature is higher than normal, stop the program and output the warning message
-		 if(cels > 36.9) yesAnswer();
-		 else  outputQuestions();
-		 HAL_Delay(4000);
-		 // turn off the LEDs and motor before new program run
-		 HAL_GPIO_WritePin(GPIOD,red_Pin,GPIO_PIN_RESET);
-		 HAL_GPIO_WritePin(GPIOD,green_Pin, GPIO_PIN_RESET);
-		 HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_RESET);
-		 HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
+	 // if a person's temperature is higher than normal, stop the program and output the warning message
+	 if(cels > 36.9) yesAnswer();
+	 else  outputQuestions();
+	 HAL_Delay(4000);
+	 // turn off the LEDs and motor before new program run
+	 HAL_GPIO_WritePin(GPIOD,red_Pin,GPIO_PIN_RESET);
+	 HAL_GPIO_WritePin(GPIOD,green_Pin, GPIO_PIN_RESET);
+	 HAL_GPIO_WritePin(GPIOA,DC_in1_Pin,GPIO_PIN_RESET);
+	 HAL_GPIO_WritePin(GPIOA,DC_in2_Pin,GPIO_PIN_RESET);
 
   }
 
 }
 
-void outputQuestions(void){
-	while(1){
-		HAL_Delay(100);
-		counter = 0; // counter for questions[] array
-		// should be initialized to 0 every time the program goes trough loop again
+float mjerenje(){
+	float raw = getADC();
+	R2 = R1 * (1023.0 / raw - 1.0);
+	logR2 = log(R2);
+	T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+	return (T - 273.15);
+}
 
+void outputQuestions(void){
+
+	HAL_Delay(100);
+	counter = 0; // counter for questions[] array
+		// should be initialized to 0 every time the program goes trough loop again
+	int odgovor;
 	// first question
 	printUSART2("%s ", nextQuestion());
 
 	// check for YES button press
-	if(checkYes()) { yesAnswer(); return; }
-	else {
+	if((odgovor = checkYes()) > 0) { yesAnswer(); return; }
+	else if (odgovor == 0){
 		// second question
 		printUSART2("%s ", nextQuestion());
-		if(checkYes()) { yesAnswer(); return; }
-		else{
+		if((odgovor = checkYes()) > 0) { yesAnswer(); return; }
+		else if(odgovor == 0){
 			// 3rd question
 			printUSART2("%s ", nextQuestion());
-			if(checkYes()) { yesAnswer(); return; }
-				else {
+			if((odgovor = checkYes()) > 0) { yesAnswer(); return; }
+				else if(odgovor == 0){
 					// 4th question
 					printUSART2("%s ", nextQuestion());
-					if(checkYes()) { yesAnswer(); return; }
-					else{
+					if((odgovor = checkYes()) > 0) { yesAnswer(); return; }
+					else if(odgovor == 0){
 						 HAL_GPIO_WritePin(GPIOD,green_Pin, GPIO_PIN_SET); // turn on green LED
 						 printUSART2("Mozete uci u prostoriju.\n\n");
 						 HAL_Delay(3000);
@@ -143,8 +138,9 @@ void outputQuestions(void){
 				}
 		}
 	}
+
 	HAL_Delay(1000);
-  }
+
 }
 
 
@@ -167,25 +163,10 @@ void yesAnswer(){
 }
 
 int checkYes(){
-	while(!HAL_GPIO_ReadPin(GPIOA,yes_button_Pin) && !HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
-
-		if(HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
-			stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
-		}
-		if(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
-			stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
-		}
-
-	}
-
-	if(HAL_GPIO_ReadPin(GPIOD, no_button_Pin)){
-		stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin);
-	}
-	if(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)){
-		stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin);
-	}
+	while(!(stateYes = HAL_GPIO_ReadPin(GPIOA,yes_button_Pin)) && !(stateNo = HAL_GPIO_ReadPin(GPIOD, no_button_Pin)));
 
 	while(HAL_GPIO_ReadPin(GPIOA,yes_button_Pin) || HAL_GPIO_ReadPin(GPIOD, no_button_Pin));
+
 	if(stateYes) {
 		stateYes = stateNo = 0;
 		printUSART2("DA\n");
@@ -474,4 +455,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
